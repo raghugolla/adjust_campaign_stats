@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  advertisement_analysis_db:
+    image: postgres:12
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: adjust_user
+      POSTGRES_USER: adjust_user
+      POSTGRES_DB: advertisement_analysis
+    ports:
+      - "9221:5432"
+
+  advertisement_analysis_dev_dbmate:
+    build: ./dbmate-docker
+    environment:
+      DATABASE_URL: postgres://adjust_user:adjust_user@advertisement_analysis_db:5432/advertisement_analysis?sslmode=disable
+    volumes:
+      - ./:/usr/data
+    depends_on:
+      - advertisement_analysis_db
+    working_dir: /usr/data
+    command: bash -c "dbmate wait && dbmate up && dbmate dump"
+
+  advertisement_analysis_web:
+    build: ./
+    volumes:
+      - ./:/app
+    environment:
+      - FLASK_APP=advertisement_analysis/app.py
+      - FLASK_DEBUG=true
+      - ADERTISEMENT_DB_URL=advertisement_analysis_db
+      - ADERTISEMENT_DB_USER=adjust_user
+      - ADERTISEMENT_DB_PASS=adjust_user
+      - ADERTISEMENT_DB_NAME=advertisement_analysis
+    depends_on:
+      - advertisement_analysis_dev_dbmate
+    ports:
+      - "9198:5000"
+    command: flask run --host="0.0.0.0" --reload
